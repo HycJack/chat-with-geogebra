@@ -3,6 +3,14 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { useGeoGebra } from "@/hooks/use-geogebra"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 
 interface GeoGebraPanelProps {
   onHide: () => void
@@ -12,10 +20,12 @@ interface GeoGebraPanelProps {
 export function GeoGebraPanel({ onHide, onExecuteLatestCommands }: GeoGebraPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
-  const { reset, setSize, isReady, loadNewFile, saveNewFile } = useGeoGebra()
+  const { reset, setSize, isReady, loadNewFile, saveNewFile, executeCommand } = useGeoGebra()
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isInitializedRef = useRef(false)
+  const [commands, setCommands] = useState("")
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   // 计算尺寸的函数
   const calculateDimensions = useCallback(() => {
@@ -37,6 +47,28 @@ export function GeoGebraPanel({ onHide, onExecuteLatestCommands }: GeoGebraPanel
       }
     }
   }, [dimensions.width, dimensions.height, isReady, setSize])
+
+  // 执行多行命令
+  const executeMultiLineCommands = () => {
+    if (!commands.trim()) return
+    
+    // 分割命令，过滤空行
+    const commandLines = commands.split('\n')
+      .map(cmd => cmd.trim())
+      .filter(cmd => cmd.length > 0)
+    
+    // 逐行执行命令
+    commandLines.forEach((cmd, index) => {
+      // 添加微小延迟，确保命令按顺序执行
+      setTimeout(() => {
+        executeCommand(cmd)
+      }, index * 100)
+    })
+    
+    // 关闭对话框并清空命令
+    setIsDialogOpen(false)
+    setCommands("")
+  }
 
   // 调整GeoGebra大小 - 只在组件挂载和isReady变化时执行
   useEffect(() => {
@@ -112,6 +144,31 @@ export function GeoGebraPanel({ onHide, onExecuteLatestCommands }: GeoGebraPanel
           >
             导出 ggb
           </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8">
+                输入命令
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>输入GeoGebra命令</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <Textarea
+                  value={commands}
+                  onChange={(e) => setCommands(e.target.value)}
+                  placeholder="输入多行GeoGebra命令，每行一个命令"
+                  rows={10}
+                />
+                <Button onClick={executeMultiLineCommands}>
+                  执行命令
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
           <Button variant="outline" size="sm" onClick={onExecuteLatestCommands} className="h-8">
             执行命令
           </Button>
@@ -127,4 +184,3 @@ export function GeoGebraPanel({ onHide, onExecuteLatestCommands }: GeoGebraPanel
     </div>
   )
 }
-
