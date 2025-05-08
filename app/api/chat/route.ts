@@ -15,8 +15,8 @@ export async function POST(req: Request) {
       systemPromptLength: configSettings?.systemPrompt?.length,
     })
 
-    // Default to OpenAI GPT-4o if no config is provided
-    const modelType = configSettings?.modelType || "gpt-4o"
+    // Default to OpenAI GPT-4o if no config is provided configSettings?.modelType ||
+    const modelType =  "Qwen2.5-32B-Instruct-1874024892354772993"
     const systemPrompt =
       configSettings?.systemPrompt ||
       "你是一个专注于数学和GeoGebra的助手。帮助用户理解数学概念并使用GeoGebra进行可视化。"
@@ -26,10 +26,12 @@ export async function POST(req: Request) {
     if (modelType.startsWith("claude")) {
       apiKey = configSettings?.apiKeys?.anthropic || process.env.ANTHROPIC_API_KEY || ""
       logger.api("使用Anthropic API密钥", { keyLength: apiKey?.length || 0 })
-    } else if (modelType.startsWith("deepseek")) {
-      apiKey = configSettings?.apiKeys?.deepseek || process.env.DEEPSEEK_API_KEY || ""
-      logger.api("使用DeepSeek API密钥", { keyLength: apiKey?.length || 0 })
-    } else {
+    }
+    //  else if (modelType.startsWith("deepseek")) {
+    //   apiKey = configSettings?.apiKeys?.deepseek || process.env.DEEPSEEK_API_KEY || ""
+    //   logger.api("使用DeepSeek API密钥", { keyLength: apiKey?.length || 0 })
+    // } 
+    else {
       // OpenAI 和其他模型
       apiKey = configSettings?.apiKeys?.openai || process.env.OPENAI_API_KEY || ""
       logger.api("使用OpenAI API密钥", { keyLength: apiKey?.length || 0 })
@@ -52,14 +54,14 @@ export async function POST(req: Request) {
         logger.api("初始化Claude模型", { model: modelType })
         the_model = createAnthropic({apiKey})
       } else if (modelType.startsWith("deepseek")) {
-        // For DeepSeek models
-        const deepseekModel = modelType === "deepseek-chat" ? "deepseek-chat" : "deepseek-coder"
+        // For DeepSeek models modelType === "deepseek-chat" ? "deepseek-chat" :
+        const deepseekModel =  "deepseek-coder"
         logger.api("初始化DeepSeek模型", { model: deepseekModel })
         the_model = createDeepSeek({apiKey})
       } else {
         // For OpenAI models (default)
         logger.api("初始化OpenAI模型", { model: modelType })
-        the_model = createOpenAI({apiKey})
+        the_model = createOpenAI({baseURL: "https://maas.hikvision.com.cn/v1", apiKey: "sk-3c1bd5cfaabb49c88750ba99b1ebf1e1"})
       }
     } catch (error) {
       logger.error("初始化模型错误:", error)

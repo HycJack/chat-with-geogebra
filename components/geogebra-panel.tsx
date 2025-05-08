@@ -12,7 +12,7 @@ interface GeoGebraPanelProps {
 export function GeoGebraPanel({ onHide, onExecuteLatestCommands }: GeoGebraPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
-  const { reset, setSize, isReady } = useGeoGebra()
+  const { reset, setSize, isReady, loadNewFile, saveNewFile } = useGeoGebra()
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isInitializedRef = useRef(false)
@@ -74,6 +74,44 @@ export function GeoGebraPanel({ onHide, onExecuteLatestCommands }: GeoGebraPanel
       <div id="geogebra-title" ref={titleRef} className="flex items-center justify-between p-4 border-b">
         <h3 className="text-xl font-medium">GeoGebra</h3>
         <div className="flex gap-2">
+          <Button
+            variant="outline" 
+            size="sm" 
+            className="h-8"
+            onClick={() => {
+              // Create a file input element
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.ggb'; // Only accept GGB files
+              
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  const base64 = event.target?.result as string;
+                  // Remove the data URL prefix if present
+                  const base64Data = base64.split(',')[1] || base64;
+                  loadNewFile({ ggbBase64: base64Data });
+                };
+                reader.readAsDataURL(file);
+              };
+              
+              // Trigger the file selection dialog
+              input.click();
+            }}
+          >
+            加载 ggb
+          </Button>
+
+          <Button
+            variant="outline" size="sm" 
+            className="h-8"
+            onClick={() => saveNewFile()}
+          >
+            导出 ggb
+          </Button>
           <Button variant="outline" size="sm" onClick={onExecuteLatestCommands} className="h-8">
             执行命令
           </Button>

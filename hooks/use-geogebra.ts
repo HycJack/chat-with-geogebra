@@ -9,14 +9,131 @@ export interface GeoGebraCommands {
   executeCommands: (commands: string[]) => void
   setSize: (width: number, height: number) => void
   isReady: boolean
+  loadNewFile: (options: { filename?: string; ggbBase64?: string }) => void
+  saveNewFile: (filename?: string) => void
 }
 
-export function useGeoGebra(): GeoGebraCommands {
+interface GeoGebraOptions {
+  filename?: string
+  ggbBase64?: string
+}
+
+export function useGeoGebra(options?: GeoGebraOptions): GeoGebraCommands {
   const [isReady, setIsReady] = useState(false)
   const scriptRef = useRef<HTMLScriptElement | null>(null)
   const checkTimerRef = useRef<NodeJS.Timeout | null>(null)
   const appletInitializedRef = useRef(false)
   const lastSizeRef = useRef({ width: 0, height: 0 })
+  const optionsRef = useRef<GeoGebraOptions>(options || {})
+
+  const initializeApplet = useCallback((options: GeoGebraOptions) => {
+    if (typeof window.GGBApplet === "undefined") {
+      logger.error("GGBApplet 类不可用")
+      return
+    }
+
+    logger.ggb("准备初始化GeoGebra applet")
+    
+    const ggbAppParams: any = {
+      appName: "classic",
+      width: "100%",
+      height: "100%",
+      showToolBar: true,
+      showAlgebraInput: true,
+      showMenuBar: true,
+      enableLabelDrags: false,
+      enableShiftDragZoom: true,
+      enableRightClick: true,
+      showResetIcon: true,
+      useBrowserForJS: false,
+      allowStyleBar: false,
+      scaleContainerClass: "geogebra-container",
+      preventFocus: false,
+      language: "zh",
+      appletOnLoad: () => {
+        logger.ggb("GeoGebra applet 加载完成并初始化")
+        window.ggbAppletReady = true
+        appletInitializedRef.current = true
+        setIsReady(true)
+      },
+    }
+
+    // 添加文件名或base64数据
+    if (options.filename) {
+      ggbAppParams.filename = options.filename
+    }
+    if (options.ggbBase64) {
+      ggbAppParams.ggbBase64 = options.ggbBase64
+    }
+
+    // 如果已经有applet实例，先移除旧的
+    if (window.ggbApplet) {
+      try {
+        const container = document.getElementById("geogebra-container")
+        if (container) {
+          container.innerHTML = '' // 清空容器
+        }
+      } catch (e) {
+        logger.error("移除旧applet时出错:", e)
+      }
+    }
+
+    // 重新注入新的applet
+    if (document.getElementById("geogebra-container")) {
+      logger.ggb("找到geogebra-container，注入GeoGebra applet")
+      const ggbApp = new window.GGBApplet(ggbAppParams, true)
+      ggbApp.inject("geogebra-container")
+      logger.ggb("GeoGebra applet 注入完成")
+    } else {
+      logger.warn("未找到geogebra-container元素")
+    }
+  }, [])
+
+  // 加载新文件的方法
+  const loadNewFile = useCallback((options: { filename?: string; ggbBase64?: string }) => {
+    if (!isReady) {
+      logger.warn("GeoGebra尚未准备好，无法加载新文件")
+      return
+    }
+
+    optionsRef.current = { ...optionsRef.current, ...options }
+    initializeApplet(optionsRef.current)
+  }, [isReady, initializeApplet])
+
+  // save新文件的方法
+  const saveNewFile = useCallback((filename = 'geogebra-file.ggb') => {
+    if (!isReady) {
+      logger.warn("GeoGebra尚未准备好，无法保存文件")
+      return
+    }
+    if (typeof window.GGBApplet === "undefined") {
+      logger.error("GGBApplet 类不可用")
+      return
+    }
+
+    try {
+      logger.ggb("准备保存 GeoGebra 文件")
+      
+      // 获取当前状态的base64数据
+      const base64 = window.ggbApplet.getBase64()
+      
+      // 创建下载链接
+      const link = document.createElement('a')
+      link.href = `data:application/octet-stream;base64,${base64}`
+      link.download = filename.endsWith('.ggb') ? filename : `${filename}.ggb`
+      
+      // 触发下载
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      logger.ggb(`文件已保存: ${filename}`)
+    } catch (e) {
+      logger.error("保存文件失败:", e)
+      return 
+    }
+    return 
+  }, [isReady])
 
   // 初始化GeoGebra
   useEffect(() => {
@@ -31,44 +148,7 @@ export function useGeoGebra(): GeoGebraCommands {
 
     script.onload = () => {
       logger.ggb("GeoGebra script 加载完成")
-      if (typeof window.GGBApplet !== "undefined") {
-        logger.ggb("GGBApplet 类可用，准备初始化")
-        const ggbAppParams = {
-          appName: "classic",
-          width: "100%",
-          height: "100%",
-          showToolBar: true,
-          showAlgebraInput: true,
-          showMenuBar: true,
-          enableLabelDrags: false,
-          enableShiftDragZoom: true,
-          enableRightClick: true,
-          showResetIcon: true,
-          useBrowserForJS: false,
-          allowStyleBar: false,
-          scaleContainerClass: "geogebra-container",
-          preventFocus: false,
-          language: "zh",
-          appletOnLoad: () => {
-            logger.ggb("GeoGebra applet 加载完成并初始化")
-            window.ggbAppletReady = true
-            appletInitializedRef.current = true
-            setIsReady(true)
-          },
-        }
-
-        // Desktop GeoGebra
-        if (document.getElementById("geogebra-container")) {
-          logger.ggb("找到geogebra-container，注入GeoGebra applet")
-          const ggbApp = new window.GGBApplet(ggbAppParams, true)
-          ggbApp.inject("geogebra-container")
-          logger.ggb("GeoGebra applet 注入完成")
-        } else {
-          logger.warn("未找到geogebra-container元素")
-        }
-      } else {
-        logger.error("GGBApplet 类不可用")
-      }
+      initializeApplet(optionsRef.current)
     }
 
     const checkLoaded = () => {
@@ -88,9 +168,8 @@ export function useGeoGebra(): GeoGebraCommands {
       if (checkTimerRef.current) {
         clearTimeout(checkTimerRef.current)
       }
-      // 不要在清理函数中移除脚本，这可能导致GeoGebra在组件重新渲染时被卸载
     }
-  }, [])
+  }, [initializeApplet])
 
   // 重置GeoGebra
   const reset = useCallback(() => {
@@ -168,6 +247,7 @@ export function useGeoGebra(): GeoGebraCommands {
     executeCommands,
     setSize,
     isReady,
+    loadNewFile,
+    saveNewFile,
   }
 }
-
