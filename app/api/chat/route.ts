@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     })
 
     // Default to OpenAI GPT-4o if no config is provided configSettings?.modelType ||
-    const modelType =  "Qwen2.5-32B-Instruct-1874024892354772993"
+    const modelType =  "DeepSeek-V3-0324"
     const systemPrompt =
       configSettings?.systemPrompt ||
       "你是一个专注于数学和GeoGebra的助手。帮助用户理解数学概念并使用GeoGebra进行可视化。"
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       } else {
         // For OpenAI models (default)
         logger.api("初始化OpenAI模型", { model: modelType })
-        the_model = createOpenAI({baseURL: "https://maas.hikvision.com.cn/v1", apiKey: "sk-3c1bd5cfaabb49c88750ba99b1ebf1e1"})
+        the_model = createOpenAI({baseURL: "http://lanz.hikvision.com/v3/openai/deepseek-v3", apiKey: "LanzOpenAI_b65f6e11-ae53-4dcf-96c0-42daa3ae1b51"})
       }
     } catch (error) {
       logger.error("初始化模型错误:", error)

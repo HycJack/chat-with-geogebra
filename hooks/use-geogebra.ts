@@ -190,6 +190,9 @@ export function useGeoGebra(options?: GeoGebraOptions): GeoGebraCommands {
   const executeCommand = useCallback((cmd: string): boolean => {
     if (window.ggbApplet) {
       try {
+        if(cmd.includes("// ")){
+          cmd = cmd.substring(0,cmd.indexOf("//"))
+        }
         window.ggbApplet.evalCommand(cmd)
         logger.ggb(`命令执行成功: "${cmd}"`)
         return true
@@ -218,6 +221,9 @@ export function useGeoGebra(options?: GeoGebraOptions): GeoGebraCommands {
       // 执行所有命令
       commands.forEach((cmd, index) => {
         setTimeout(() => {
+          if(cmd.includes("// ")){
+            cmd = cmd.substring(0,cmd.indexOf("//"))
+          }
           executeCommand(cmd)
         }, index * 100) // 每条命令间隔100ms执行，避免执行过快
       })
