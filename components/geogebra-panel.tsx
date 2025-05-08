@@ -54,7 +54,7 @@ export function GeoGebraPanel({ onHide, onExecuteLatestCommands }: GeoGebraPanel
     
     // 分割命令，过滤空行
     const commandLines = commands.split('\n')
-      .map(cmd => cmd.trim())
+      .map(cmd => cmd.includes("// ")? cmd = cmd.trim().substring(0,cmd.trim().indexOf("//")):cmd.trim())
       .filter(cmd => cmd.length > 0)
     
     // 逐行执行命令
